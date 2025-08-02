@@ -64,11 +64,11 @@ export const DashBoard = () => {
   const navigate = useNavigate();
   const { data, isLoading, error , refetch } = useGetDataForDashBoardQuery();
   
-  const refresh = async()=>{await refetch()}
+  // const refresh = async()=>{await refetch()}
 
-  useEffect(()=>{
-    refresh()
-  },[])
+  // useEffect(()=>{
+  //   refresh()
+  // },[])
 
   // Memoized user data 
   const user = useMemo(() => ({
