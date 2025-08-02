@@ -59,7 +59,7 @@ const chartStyles = `
   }
 `;
 
-export const Dashboard = () => {
+export const DashBoard = () => {
   const { user: authuser } = useSelector((state) => state.auth);
   const navigate = useNavigate();
   const { data, isLoading, error , refetch } = useGetDataForDashBoardQuery();

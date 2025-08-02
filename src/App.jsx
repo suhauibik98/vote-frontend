@@ -12,7 +12,7 @@ import { useAuth } from "./Hook/useAuth";
 
 // User Components
 import { UserLayout } from "./Pages/user/UserLayout";
-import { Dashboard } from "./Pages/user/Dashboard";
+import { DashBoard } from "./Pages/user/DashBoard";
 import { ActiveVote } from "./Pages/user/vote/ActiveVote";
 import { VotedList } from "./Pages/user/vote/VotedList";
 import { Settings } from "./Pages/user/Settings";
@@ -70,7 +70,7 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard" element={<DashBoard />} />
             <Route path="/comming-vote" element={<CommingVote />} />
             <Route path="/active-vote" element={<ActiveVote />} />
             <Route path="/voted-list" element={<VotedList />} />
