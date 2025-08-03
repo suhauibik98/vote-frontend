@@ -34,6 +34,27 @@ export const CreateNewVote = () => {
   const { data: userName = [], isLoading: loadingUsers } = useGetAlluserNameQuery();
   const [addNewVote] = useAddNewVoteMutation();
 
+  // Jordan timezone utility functions
+  const getJordanTime = (date = null) => {
+    const targetDate = date || new Date();
+    return new Date(targetDate.toLocaleString("en-US", {timeZone: "Asia/Amman"}));
+  };
+
+  const getJordanDateString = (date = null) => {
+    const targetDate = date || getJordanTime();
+    const year = targetDate.getFullYear();
+    const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const day = String(targetDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getJordanTimeString = (date = null) => {
+    const targetDate = date || getJordanTime();
+    const hours = String(targetDate.getHours()).padStart(2, '0');
+    const minutes = String(targetDate.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
   // Clear success message and hide notification after 5 seconds
   useEffect(() => {
     if (successMessage) {
@@ -69,16 +90,17 @@ export const CreateNewVote = () => {
       newErrors.voteSubject = "Vote subject must be less than 200 characters";
     }
 
-    // Date validation
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Date validation with Jordan timezone
+    const jordanToday = getJordanTime();
+    jordanToday.setHours(0, 0, 0, 0);
     
     if (!formData.startDate) {
       newErrors.startDate = "Start date is required";
     } else {
       const startDate = new Date(formData.startDate);
-      if (startDate < today) {
-        newErrors.startDate = "Start date cannot be in the past";
+      startDate.setHours(0, 0, 0, 0);
+      if (startDate < jordanToday) {
+        newErrors.startDate = "Start date cannot be in the past (Jordan time)";
       }
     }
 
@@ -102,15 +124,16 @@ export const CreateNewVote = () => {
       newErrors.endTime = "End time is required";
     }
 
-    // Combined date and time validation
+    // Combined date and time validation with Jordan timezone
     if (formData.startDate && formData.endDate && formData.startTime && formData.endTime) {
+      // Create date objects in local time but validate against Jordan time
       const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`);
       const endDateTime = new Date(`${formData.endDate}T${formData.endTime}`);
-      const now = new Date();
+      const jordanNow = getJordanTime();
 
-      // Check if start date time is in the past
-      if (startDateTime <= now) {
-        newErrors.startTime = "Start date and time must be in the future";
+      // Check if start date time is in the past (Jordan time)
+      if (startDateTime <= jordanNow) {
+        newErrors.startTime = "Start date and time must be in the future (Jordan time)";
       }
 
       // Check if end date time is after start date time
@@ -124,6 +147,18 @@ export const CreateNewVote = () => {
       
       if (diffHours < 1) {
         newErrors.endTime = "Voting period must be at least 1 hour";
+      }
+
+      // Additional validation for same-day votes
+      if (formData.startDate === formData.endDate) {
+        const startTime24 = new Date(`1970-01-01T${formData.startTime}:00`);
+        const endTime24 = new Date(`1970-01-01T${formData.endTime}:00`);
+        const timeDiffMs = endTime24 - startTime24;
+        const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
+        
+        if (timeDiffHours < 1) {
+          newErrors.endTime = "For same-day voting, end time must be at least 1 hour after start time";
+        }
       }
     }
 
@@ -240,8 +275,7 @@ export const CreateNewVote = () => {
   };
 
   const getMinDate = () => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
+    return getJordanDateString();
   };
 
   const getMinEndDate = () => {
@@ -252,13 +286,14 @@ export const CreateNewVote = () => {
   const getMinTime = () => {
     if (!formData.startDate) return "";
     
-    const today = new Date();
+    const jordanNow = getJordanTime();
     const selectedDate = new Date(formData.startDate);
+    const jordanToday = new Date(getJordanDateString());
     
-    // If start date is today, set minimum time to current time + 1 hour
-    if (selectedDate.toDateString() === today.toDateString()) {
-      const minTime = new Date(today.getTime() ); // Add 1 hour
-      return minTime.toTimeString().slice(0, 5);
+    // If start date is today in Jordan timezone
+    if (selectedDate.toDateString() === jordanToday.toDateString()) {
+      // Return current Jordan time (no additional buffer)
+      return getJordanTimeString(jordanNow);
     }
     
     return ""; // No minimum time for future dates
@@ -269,9 +304,11 @@ export const CreateNewVote = () => {
     
     // If same date, end time must be after start time
     if (formData.startDate === formData.endDate) {
-      const startTime = new Date(`1970-01-01T${formData.startTime}`);
+      const startTime = new Date(`1970-01-01T${formData.startTime}:00`);
       const minEndTime = new Date(startTime.getTime() + 60 * 60 * 1000); // Add 1 hour
-      return minEndTime.toTimeString().slice(0, 5);
+      const hours = String(minEndTime.getHours()).padStart(2, '0');
+      const minutes = String(minEndTime.getMinutes()).padStart(2, '0');
+      return `${hours}:${minutes}`;
     }
     
     return ""; // No minimum time for different dates
@@ -336,6 +373,10 @@ export const CreateNewVote = () => {
                 <CheckCircle className="w-4 h-4 text-green-500" />
                 <span>No duplicate candidates</span>
               </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-blue-500" />
+                <span>All times in Jordan timezone</span>
+              </div>
             </div>
           </div>
         </div>
@@ -350,6 +391,9 @@ export const CreateNewVote = () => {
           <p className="text-gray-600 text-sm lg:text-base max-w-2xl mx-auto">
             Set up a new voting poll for your organization. Define candidates, set voting period, and let democracy work!
           </p>
+          <p className="text-blue-600 text-xs mt-2">
+            🕐 All times are in Jordan timezone (GMT+3)
+          </p>
         </div>
 
         {/* Main Form */}
@@ -359,7 +403,7 @@ export const CreateNewVote = () => {
             {/* Form Header */}
             <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 lg:px-8 py-6 lg:py-8">
               <h2 className="text-xl lg:text-2xl font-bold text-white mb-2">Vote Configuration</h2>
-              <p className="text-blue-100 text-sm lg:text-base">Fill in the details to create your voting poll</p>
+              <p className="text-blue-100 text-sm lg:text-base">Fill in the details to create your voting poll (Jordan timezone)</p>
             </div>
 
             <div className="px-6 lg:px-8 pb-6 lg:pb-8 space-y-6 lg:space-y-8">
@@ -404,7 +448,7 @@ export const CreateNewVote = () => {
               <div className="space-y-6">
                 <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-blue-500" />
-                  Voting Period *
+                  Voting Period * (Jordan Time - GMT+3)
                 </h3>
                 
                 {/* Start Date and Time */}
@@ -435,7 +479,7 @@ export const CreateNewVote = () => {
                   <div className="space-y-2">
                     <label className="flex items-center gap-2 text-sm lg:text-base font-medium text-gray-700">
                       <Clock className="w-4 h-4 text-green-500" />
-                      Start Time *
+                      Start Time * (Jordan Time)
                     </label>
                     <input
                       type="time"
@@ -484,7 +528,7 @@ export const CreateNewVote = () => {
                   <div className="space-y-2">
                     <label className="flex items-center gap-2 text-sm lg:text-base font-medium text-gray-700">
                       <Clock className="w-4 h-4 text-orange-500" />
-                      End Time *
+                      End Time * (Jordan Time)
                     </label>
                     <input
                       type="time"
@@ -657,13 +701,7 @@ export const CreateNewVote = () => {
             </div>
           </form>
         </div>
-
-        
       </div>
-
-      {/* Custom CSS for animations and styling */}
-      
    </div>
  );
 };
-        
