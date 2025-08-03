@@ -60,7 +60,7 @@ const isProduction = import.meta.env.VITE_ENV === 'production';
 
 const cookieOptions = {
   secure: isProduction,
-  sameSite: 'strict',
+  sameSite: 'lax',
   path: '/',
 };
 
