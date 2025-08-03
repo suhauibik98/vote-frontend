@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { 
@@ -34,29 +34,23 @@ import {
 import { useGetDataForDashBoardAdminQuery } from '../../redux/apis/AdminApis';
 
 export const AdminDashboard = () => {
-  const { user ,isAuthenticated , authInitialized } = useSelector(state => state.auth);
+  const { user ,isAuthenticated ,authInitialized } = useSelector(state => state.auth);
   const navigate = useNavigate();
 
 const { data, isLoading, error } = useGetDataForDashBoardAdminQuery(undefined, {
-    skip: !isAuthenticated || !user
-  });
+  skip: !authInitialized || !isAuthenticated || !user
+});
 
-  if (!authInitialized) {
-    return (
-      <main className="p-2 sm:p-4 lg:p-6 xl:p-8">
-        <div className="animate-pulse">
-          <div className="h-6 sm:h-8 bg-gray-200 rounded w-1/3 mb-2"></div>
-          <div className="text-sm">Initializing...</div>
-        </div>
-      </main>
-    );
-  }
-
-  // ✅ Redirect if not authenticated after initialization
-  if (authInitialized && !isAuthenticated) {
-    navigate('/login');
-    return null;
-  }
+ if (!authInitialized) {
+  return (
+    <main className="p-2 sm:p-4 lg:p-6 xl:p-8">
+      <div className="animate-pulse">
+        <div className="h-6 sm:h-8 bg-gray-200 rounded w-1/3 mb-2"></div>
+        <div className="text-sm">Initializing authentication...</div>
+      </div>
+    </main>
+  );
+}
   // Mock chart data - replace with your actual data processing
   const generateChartData = () => {
     if (!data) return { lineData: [], pieData: [], barData: [] };

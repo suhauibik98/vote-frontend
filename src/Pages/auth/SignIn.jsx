@@ -411,7 +411,7 @@ export const SignIn = () => {
         } else {
           navigate("/dashboard", { replace: true });
         }
-      }, 2500);
+      }, 2700);
     },
     [dispatch, navigate, showNotification]
   );
