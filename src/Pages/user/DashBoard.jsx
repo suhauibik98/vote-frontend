@@ -62,7 +62,7 @@ const chartStyles = `
 export const DashBoard = () => {
   const { user: authuser } = useSelector((state) => state.auth);
   const navigate = useNavigate();
-  const { data, isLoading, error , refetch } = useGetDataForDashBoardQuery({skip:!authuser});
+  const { data, isLoading, error , refetch } = useGetDataForDashBoardQuery({skip:true});
   
   // const refresh = async()=>{await refetch()}
 
