@@ -42,17 +42,16 @@ export const CreateNewVote = () => {
 
   const getJordanDateString = (date = null) => {
     const targetDate = date || getJordanTime();
-    const year = targetDate.getFullYear();
-    const month = String(targetDate.getMonth() + 1).padStart(2, '0');
-    const day = String(targetDate.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return targetDate.toLocaleDateString('en-CA'); // en-CA gives YYYY-MM-DD format
   };
 
   const getJordanTimeString = (date = null) => {
     const targetDate = date || getJordanTime();
-    const hours = String(targetDate.getHours()).padStart(2, '0');
-    const minutes = String(targetDate.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
+    return targetDate.toLocaleTimeString('en-US', {
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   // Clear success message and hide notification after 5 seconds
@@ -92,14 +91,13 @@ export const CreateNewVote = () => {
 
     // Date validation with Jordan timezone
     const jordanToday = getJordanTime();
-    jordanToday.setHours(0, 0, 0, 0);
+    const jordanTodayString = getJordanDateString(jordanToday);
     
     if (!formData.startDate) {
       newErrors.startDate = "Start date is required";
     } else {
-      const startDate = new Date(formData.startDate);
-      startDate.setHours(0, 0, 0, 0);
-      if (startDate < jordanToday) {
+      // Compare date strings directly
+      if (formData.startDate < jordanTodayString) {
         newErrors.startDate = "Start date cannot be in the past (Jordan time)";
       }
     }
@@ -126,15 +124,22 @@ export const CreateNewVote = () => {
 
     // Combined date and time validation with Jordan timezone
     if (formData.startDate && formData.endDate && formData.startTime && formData.endTime) {
-      // Create date objects in local time but validate against Jordan time
-      const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`);
-      const endDateTime = new Date(`${formData.endDate}T${formData.endTime}`);
       const jordanNow = getJordanTime();
-
-      // Check if start date time is in the past (Jordan time) - allow 1 minute tolerance
-      const oneMinuteAgo = new Date(jordanNow.getTime() - 60 * 1000);
-      if (startDateTime <= oneMinuteAgo) {
-        newErrors.startTime = "Start date and time must be in the future (Jordan time)";
+      const jordanTodayString = getJordanDateString(jordanNow);
+      
+      // Create datetime objects for comparison
+      const startDateTime = new Date(`${formData.startDate}T${formData.startTime}:00`);
+      const endDateTime = new Date(`${formData.endDate}T${formData.endTime}:00`);
+      
+      // If start date is today, validate against current Jordan time
+      if (formData.startDate === jordanTodayString) {
+        const currentJordanTime = getJordanTimeString(jordanNow);
+        const selectedTime = formData.startTime;
+        
+        // Compare times as strings (HH:MM format)
+        if (selectedTime <= currentJordanTime) {
+          newErrors.startTime = "Start time must be in the future (Jordan time)";
+        }
       }
 
       // Check if end date time is after start date time
@@ -152,12 +157,11 @@ export const CreateNewVote = () => {
 
       // Additional validation for same-day votes
       if (formData.startDate === formData.endDate) {
-        const startTime24 = new Date(`1970-01-01T${formData.startTime}:00`);
-        const endTime24 = new Date(`1970-01-01T${formData.endTime}:00`);
-        const timeDiffMs = endTime24 - startTime24;
-        const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
+        const startTimeMinutes = parseInt(formData.startTime.split(':')[0]) * 60 + parseInt(formData.startTime.split(':')[1]);
+        const endTimeMinutes = parseInt(formData.endTime.split(':')[0]) * 60 + parseInt(formData.endTime.split(':')[1]);
+        const timeDiffMinutes = endTimeMinutes - startTimeMinutes;
         
-        if (timeDiffHours < 1) {
+        if (timeDiffMinutes < 60) {
           newErrors.endTime = "For same-day voting, end time must be at least 1 hour after start time";
         }
       }
@@ -288,14 +292,12 @@ export const CreateNewVote = () => {
     if (!formData.startDate) return "";
     
     const jordanNow = getJordanTime();
-    const selectedDate = new Date(formData.startDate);
-    const jordanTodayString = getJordanDateString();
+    const jordanTodayString = getJordanDateString(jordanNow);
     
     // If start date is today in Jordan timezone
     if (formData.startDate === jordanTodayString) {
-      // Add 1 minute buffer to current Jordan time
-      const minTime = new Date(jordanNow.getTime() + 60 * 1000); // Add 1 minute
-      return getJordanTimeString(minTime);
+      // Return current Jordan time
+      return getJordanTimeString(jordanNow);
     }
     
     return ""; // No minimum time for future dates
