@@ -10,10 +10,284 @@ import {
   XCircle, 
   AlertCircle, 
   Info,
-  Mail
+  Mail,
+  Eye,
+  EyeOff,
+  ChevronDown
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSignupMutation } from "../../redux/apis/AuthApis";
+
+// Enhanced Mobile-Friendly Date Input Component
+const MobileFriendlyDateInput = ({ 
+  value, 
+  onChange, 
+  error, 
+  disabled = false,
+  label = "Birth Date",
+  required = true,
+  minAge = 16 
+}) => {
+  const [tempDate, setTempDate] = useState(value || "1900-01-01");
+
+  // Calculate max date (today) and min date (based on max age, e.g., 100 years)
+  const maxDate = new Date().toISOString().split("T")[0];
+  const minDate = new Date(new Date().getFullYear() - 100, 0, 1).toISOString().split("T")[0];
+
+  // Format date for display
+  const formatDateForDisplay = useCallback((dateString) => {
+    if (!dateString) return "Select your date of birth";
+    
+    try {
+      const date = new Date(dateString + "T00:00:00");
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long", 
+        day: "numeric"
+      });
+    } catch {
+      return "Select your date of birth";
+    }
+  }, []);
+
+  // Handle date change with validation
+  const handleDateChange = useCallback((newDate) => {
+    setTempDate(newDate);
+    onChange(newDate);
+  }, [onChange]);
+
+  // Generate year options (current year - 100 to current year - minAge)
+  const yearOptions = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let year = currentYear - minAge; year >= currentYear - 100; year--) {
+      years.push(year);
+    }
+    return years;
+  }, [minAge]);
+
+  // Generate month options
+  const monthOptions = useMemo(() => [
+    { value: "01", label: "January" },
+    { value: "02", label: "February" },
+    { value: "03", label: "March" },
+    { value: "04", label: "April" },
+    { value: "05", label: "May" },
+    { value: "06", label: "June" },
+    { value: "07", label: "July" },
+    { value: "08", label: "August" },
+    { value: "09", label: "September" },
+    { value: "10", label: "October" },
+    { value: "11", label: "November" },
+    { value: "12", label: "December" },
+  ], []);
+
+  // Generate day options based on selected month/year
+  const dayOptions = useMemo(() => {
+    if (!tempDate && !value) return [];
+    
+    const dateToUse = value || tempDate;
+    const [year, month] = dateToUse.split("-");
+    if (!year || !month) return [];
+    
+    const daysInMonth = new Date(parseInt(year), parseInt(month), 0).getDate();
+    const days = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(day.toString().padStart(2, "0"));
+    }
+    return days;
+  }, [tempDate, value]);
+
+  // Parse current date parts
+  const dateParts = useMemo(() => {
+    const dateToUse = value || tempDate;
+    if (!dateToUse) return { year: "", month: "", day: "" };
+    const [year, month, day] = dateToUse.split("-");
+    return { year: year || "", month: month || "", day: day || "" };
+  }, [tempDate, value]);
+
+  // Handle dropdown date selection
+  const handleDropdownChange = useCallback((type, newValue) => {
+    const parts = { ...dateParts, [type]: newValue };
+    
+    if (parts.year && parts.month && parts.day) {
+      const newDate = `${parts.year}-${parts.month}-${parts.day}`;
+      handleDateChange(newDate);
+    } else {
+      // Update temp state for partial selections
+      setTempDate(parts.year && parts.month && parts.day ? 
+        `${parts.year}-${parts.month}-${parts.day}` : "");
+    }
+  }, [dateParts, handleDateChange]);
+
+  return (
+    <div className="space-y-3">
+      {/* Label */}
+      <label className="block text-xs sm:text-sm font-medium text-gray-700">
+        {label} {required && <span className="text-red-500">*</span>}
+        <span className="text-xs text-gray-500 ml-1">
+          (Must be {minAge}+ years old)
+        </span>
+      </label>
+
+      {/* Native Date Input (Primary method) */}
+      <div className="relative">
+        <div className="absolute inset-y-0 left-0 pl-2 sm:pl-3 flex items-center pointer-events-none z-10">
+          <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600" />
+        </div>
+        
+        <motion.input
+          whileFocus={{ scale: 1.01 }}
+          type="date"
+          value={value}
+          onChange={(e) => handleDateChange(e.target.value)}
+          disabled={disabled}
+          max={maxDate}
+          min={minDate}
+          className={`w-full pl-7 sm:pl-10 pr-4 py-3 sm:py-4 text-sm sm:text-base border-2 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 bg-white disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation ${
+            error
+              ? "border-red-400 focus:ring-red-500 focus:border-red-500"
+              : "border-gray-200 hover:border-emerald-300"
+          }`}
+          style={{
+            WebkitAppearance: "none",
+            appearance: "none",
+            fontSize: "16px", // Prevents iOS zoom
+            minHeight: "48px", // Better touch target
+            colorScheme: "light",
+          }}
+          placeholder="Select date"
+          autoComplete="bday"
+        />
+
+        {/* Custom calendar icon overlay */}
+        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+          <motion.div
+            animate={{ rotate: [0, 5, -5, 0] }}
+            transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+          >
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 2v12a2 2 0 002 2z" />
+            </svg>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Alternative Method: Dropdown Selectors */}
+      <details className="group">
+        <summary className="cursor-pointer text-xs text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1 py-1">
+          <Info className="w-3 h-3" />
+          Alternative: Use dropdowns instead
+          <ChevronDown className="w-3 h-3 group-open:rotate-180 transition-transform" />
+        </summary>
+        
+        <div className="mt-2 bg-gray-50 rounded-xl p-3 space-y-3">
+          <div className="grid grid-cols-3 gap-2">
+            {/* Year Selector */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Year</label>
+              <div className="relative">
+                <select
+                  value={dateParts.year}
+                  onChange={(e) => handleDropdownChange("year", e.target.value)}
+                  disabled={disabled}
+                  className="w-full appearance-none bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:opacity-50"
+                  style={{ fontSize: "16px" }}
+                >
+                  <option value="">Year</option>
+                  {yearOptions.map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-1 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Month Selector */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Month</label>
+              <div className="relative">
+                <select
+                  value={dateParts.month}
+                  onChange={(e) => handleDropdownChange("month", e.target.value)}
+                  disabled={disabled}
+                  className="w-full appearance-none bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:opacity-50"
+                  style={{ fontSize: "16px" }}
+                >
+                  <option value="">Month</option>
+                  {monthOptions.map(month => (
+                    <option key={month.value} value={month.value}>{month.label.slice(0, 3)}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-1 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Day Selector */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Day</label>
+              <div className="relative">
+                <select
+                  value={dateParts.day}
+                  onChange={(e) => handleDropdownChange("day", e.target.value)}
+                  disabled={disabled || !dateParts.year || !dateParts.month}
+                  className="w-full appearance-none bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:opacity-50"
+                  style={{ fontSize: "16px" }}
+                >
+                  <option value="">Day</option>
+                  {dayOptions.map(day => (
+                    <option key={day} value={day}>{day}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-1 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      {/* Display selected date */}
+      {value && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-emerald-50 border border-emerald-200 rounded-lg p-2 flex items-center gap-2"
+        >
+          <Calendar className="w-4 h-4 text-emerald-600" />
+          <span className="text-xs sm:text-sm text-emerald-700 font-medium">
+            Selected: {formatDateForDisplay(value)}
+          </span>
+        </motion.div>
+      )}
+
+      {/* Error Display */}
+      <AnimatePresence>
+        {error && (
+          <motion.p
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            className="text-xs sm:text-sm text-red-600 flex items-center gap-1"
+          >
+            <XCircle className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+            {error}
+          </motion.p>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Tips */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        className="text-xs text-gray-500 bg-blue-50 border border-blue-200 rounded-lg p-2"
+      >
+        <div className="font-medium text-blue-700 mb-1">📱 Tips:</div>
+        <div>• Tap date field for native picker • Use dropdowns if needed</div>
+      </motion.div>
+    </div>
+  );
+};
 
 export const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -82,6 +356,26 @@ export const SignUp = () => {
       }));
     }
   }, [errors]);
+
+  // Handle date change from MobileFriendlyDateInput
+  const handleDateChange = useCallback(
+    (date) => {
+      setFormData((prev) => ({
+        ...prev,
+        birth_date: date,
+      }));
+
+      // Clear birth_date error when user selects a date
+      if (errors.birth_date) {
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors.birth_date;
+          return newErrors;
+        });
+      }
+    },
+    [errors]
+  );
 
   const validateForm = useCallback(() => {
     const newErrors = {};
@@ -390,26 +684,6 @@ export const SignUp = () => {
         {/* Header - Fully Responsive */}
         <motion.div
           variants={itemVariants}
-          className="text-center mb-4 sm:mb-6 md:mb-8"
-        >
-          <motion.div
-            whileHover={{ rotate: 360, scale: 1.1 }}
-            transition={{ duration: 0.6 }}
-            className="inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-lg sm:rounded-xl mb-2 sm:mb-3 md:mb-4 shadow-lg"
-          >
-            <Building2 className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white" />
-          </motion.div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-1 sm:mb-2">
-            Join Our Team
-          </h1>
-          <p className="text-xs sm:text-sm md:text-base text-gray-600 px-4">
-            Create your employee account
-          </p>
-        </motion.div>
-
-        {/* Form Card - Enhanced Responsiveness */}
-        <motion.div
-          variants={itemVariants}
           className="bg-white/90 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl shadow-xl border border-white/20 p-4 sm:p-5 md:p-6 lg:p-8"
         >
           <form onSubmit={handleSubmit} onKeyPress={handleKeyPress} noValidate>
@@ -481,6 +755,7 @@ export const SignUp = () => {
                     style={{
                       WebkitAppearance: "none",
                       appearance: "none",
+                      fontSize: "16px",
                     }}
                   />
                   {/* Character counter */}
@@ -530,6 +805,9 @@ export const SignUp = () => {
                     }`}
                     placeholder="Enter your email address"
                     autoComplete="email"
+                    style={{
+                      fontSize: "16px",
+                    }}
                   />
                 </div>
                 {errors.email && (
@@ -575,6 +853,9 @@ export const SignUp = () => {
                     }`}
                     placeholder="Enter your full name"
                     autoComplete="name"
+                    style={{
+                      fontSize: "16px",
+                    }}
                   />
                   <div className="absolute inset-y-0 right-0 pr-2 sm:pr-3 flex items-center pointer-events-none">
                     <span className={`text-xs ${formData.name.length >= 45 ? 'text-amber-600' : 'text-gray-400'}`}>
@@ -594,52 +875,17 @@ export const SignUp = () => {
                 )}
               </motion.div>
 
-              {/* Birth Date Field - Enhanced */}
+              {/* Birth Date Field - Enhanced with MobileFriendlyDateInput */}
               <motion.div variants={itemVariants}>
-                <label
-                  htmlFor="birth_date"
-                  className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2"
-                >
-                  Birth Date <span className="text-red-500">*</span>
-                  <span className="text-xs text-gray-500 ml-1">
-                    (Must be 16+ years old)
-                  </span>
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-2 sm:pl-3 flex items-center pointer-events-none">
-                    <Calendar className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-gray-400" />
-                  </div>
-                  <motion.input
-                    whileFocus={{ scale: 1.01 }}
-                    type="date"
-                    id="birth_date"
-                    name="birth_date"
-                    value={formData.birth_date}
-                    onChange={handleInputChange}
-                    disabled={isLoading}
-                    max={new Date().toISOString().split("T")[0]}
-                    className={`w-full pl-7 sm:pl-8 md:pl-9 lg:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 md:py-3 text-xs sm:text-sm md:text-base border rounded-lg sm:rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-gray-50/50 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation ${
-                      errors.birth_date
-                        ? "border-red-400 focus:ring-red-500"
-                        : "border-gray-200"
-                    }`}
-                    autoComplete="bday"
-                    style={{
-                      WebkitAppearance: "none",
-                      appearance: "none",
-                    }}
-                  />
-                </div>
-                {errors.birth_date && (
-                  <motion.p
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mt-1.5 text-xs sm:text-sm text-red-600 flex items-center gap-1"
-                  >
-                    <XCircle className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                    {errors.birth_date}
-                  </motion.p>
-                )}
+                <MobileFriendlyDateInput
+                  value={formData.birth_date}
+                  onChange={handleDateChange}
+                  error={errors.birth_date}
+                  disabled={isLoading}
+                  label="Birth Date"
+                  required={true}
+                  minAge={16}
+                />
               </motion.div>
 
               {/* Reference Name Field - Enhanced */}
@@ -707,6 +953,9 @@ export const SignUp = () => {
                     }`}
                     placeholder="Enter reference person's name"
                     autoComplete="off"
+                    style={{
+                      fontSize: "16px",
+                    }}
                   />
                   <div className="absolute inset-y-0 right-0 pr-2 sm:pr-3 flex items-center pointer-events-none">
                     <span className={`text-xs ${formData.ref_Name.length >= 18 ? 'text-amber-600' : 'text-gray-400'}`}>
@@ -851,3 +1100,4 @@ export const SignUp = () => {
     </div>
   );
 };
+        

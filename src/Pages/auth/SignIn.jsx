@@ -17,6 +17,7 @@ import {
   Shield,
   Clock,
   RefreshCw,
+  ChevronDown,
 } from "lucide-react";
 import {
   useCheckUserValidationMutation,
@@ -30,6 +31,277 @@ import {
   loginSuccess,
   loginFailure,
 } from "../../redux/slices/authSlice";
+
+// Enhanced Mobile-Friendly Date Input Component
+const MobileFriendlyDateInput = ({ 
+  value, 
+  onChange, 
+  error, 
+  disabled = false,
+  label = "Birth Date",
+  required = true,
+  minAge = 16 
+}) => {
+  const [tempDate, setTempDate] = useState(value || "1900-01-01");
+
+  // Calculate max date (today) and min date (based on max age, e.g., 100 years)
+  const maxDate = new Date().toISOString().split("T")[0];
+  const minDate = new Date(new Date().getFullYear() - 100, 0, 1).toISOString().split("T")[0];
+
+  // Format date for display
+  const formatDateForDisplay = useCallback((dateString) => {
+    if (!dateString) return "Select your date of birth";
+    
+    try {
+      const date = new Date(dateString + "T00:00:00");
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long", 
+        day: "numeric"
+      });
+    } catch {
+      return "Select your date of birth";
+    }
+  }, []);
+
+  // Handle date change with validation
+  const handleDateChange = useCallback((newDate) => {
+    setTempDate(newDate);
+    onChange(newDate);
+  }, [onChange]);
+
+  // Generate year options (current year - 100 to current year - minAge)
+  const yearOptions = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let year = currentYear - minAge; year >= currentYear - 100; year--) {
+      years.push(year);
+    }
+    return years;
+  }, [minAge]);
+
+  // Generate month options
+  const monthOptions = useMemo(() => [
+    { value: "01", label: "January" },
+    { value: "02", label: "February" },
+    { value: "03", label: "March" },
+    { value: "04", label: "April" },
+    { value: "05", label: "May" },
+    { value: "06", label: "June" },
+    { value: "07", label: "July" },
+    { value: "08", label: "August" },
+    { value: "09", label: "September" },
+    { value: "10", label: "October" },
+    { value: "11", label: "November" },
+    { value: "12", label: "December" },
+  ], []);
+
+  // Generate day options based on selected month/year
+  const dayOptions = useMemo(() => {
+    if (!tempDate && !value) return [];
+    
+    const dateToUse = value || tempDate;
+    const [year, month] = dateToUse.split("-");
+    if (!year || !month) return [];
+    
+    const daysInMonth = new Date(parseInt(year), parseInt(month), 0).getDate();
+    const days = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(day.toString().padStart(2, "0"));
+    }
+    return days;
+  }, [tempDate, value]);
+
+  // Parse current date parts
+  const dateParts = useMemo(() => {
+    const dateToUse = value || tempDate;
+    if (!dateToUse) return { year: "", month: "", day: "" };
+    const [year, month, day] = dateToUse.split("-");
+    return { year: year || "", month: month || "", day: day || "" };
+  }, [tempDate, value]);
+
+  // Handle dropdown date selection
+  const handleDropdownChange = useCallback((type, newValue) => {
+    const parts = { ...dateParts, [type]: newValue };
+    
+    if (parts.year && parts.month && parts.day) {
+      const newDate = `${parts.year}-${parts.month}-${parts.day}`;
+      handleDateChange(newDate);
+    } else {
+      // Update temp state for partial selections
+      setTempDate(parts.year && parts.month && parts.day ? 
+        `${parts.year}-${parts.month}-${parts.day}` : "");
+    }
+  }, [dateParts, handleDateChange]);
+
+  return (
+    <div className="space-y-3">
+      {/* Label */}
+      <label className="block text-xs sm:text-sm font-medium text-gray-700">
+        {label} {required && <span className="text-red-500">*</span>}
+        <span className="text-xs text-gray-500 ml-1">
+          (Must be {minAge}+ years old)
+        </span>
+      </label>
+
+      {/* Native Date Input (Primary method) */}
+      <div className="relative">
+        <div className="absolute inset-y-0 left-0 pl-2 sm:pl-3 flex items-center pointer-events-none z-10">
+          <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600" />
+        </div>
+        
+        <motion.input
+          whileFocus={{ scale: 1.01 }}
+          type="date"
+          value={value}
+          onChange={(e) => handleDateChange(e.target.value)}
+          disabled={disabled}
+          max={maxDate}
+          min={minDate}
+          className={`w-full pl-7 sm:pl-10 pr-4 py-3 sm:py-4 text-sm sm:text-base border-2 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 bg-white disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation ${
+            error
+              ? "border-red-400 focus:ring-red-500 focus:border-red-500"
+              : "border-gray-200 hover:border-emerald-300"
+          }`}
+          style={{
+            WebkitAppearance: "none",
+            appearance: "none",
+            fontSize: "16px", // Prevents iOS zoom
+            minHeight: "48px", // Better touch target
+            colorScheme: "light",
+          }}
+          placeholder="Select date"
+          autoComplete="bday"
+        />
+
+        {/* Custom calendar icon overlay */}
+        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+          <motion.div
+            animate={{ rotate: [0, 5, -5, 0] }}
+            transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+          >
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 2v12a2 2 0 002 2z" />
+            </svg>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Alternative Method: Dropdown Selectors */}
+      <details className="group">
+        <summary className="cursor-pointer text-xs text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1 py-1">
+          <Info className="w-3 h-3" />
+          Alternative: Use dropdowns instead
+          <ChevronDown className="w-3 h-3 group-open:rotate-180 transition-transform" />
+        </summary>
+        
+        <div className="mt-2 bg-gray-50 rounded-xl p-3 space-y-3">
+          <div className="grid grid-cols-3 gap-2">
+            {/* Year Selector */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Year</label>
+              <div className="relative">
+                <select
+                  value={dateParts.year}
+                  onChange={(e) => handleDropdownChange("year", e.target.value)}
+                  disabled={disabled}
+                  className="w-full  appearance-none bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:opacity-50"
+                  style={{ fontSize: "16px" }}
+                >
+                  <option value="">Year</option>
+                  {yearOptions.map(year => (
+                    <option  key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-1 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Month Selector */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Month</label>
+              <div className="relative">
+                <select
+                  value={dateParts.month}
+                  onChange={(e) => handleDropdownChange("month", e.target.value)}
+                  disabled={disabled}
+                  className="w-full appearance-none bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:opacity-50"
+                  style={{ fontSize: "16px" }}
+                >
+                  <option value="">Month</option>
+                  {monthOptions.map(month => (
+                    <option key={month.value} value={month.value}>{month.label.slice(0, 3)}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-1 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Day Selector */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Day</label>
+              <div className="relative">
+                <select
+                  value={dateParts.day}
+                  onChange={(e) => handleDropdownChange("day", e.target.value)}
+                  disabled={disabled || !dateParts.year || !dateParts.month}
+                  className="w-full appearance-none bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:opacity-50"
+                  style={{ fontSize: "16px" }}
+                >
+                  <option value="">Day</option>
+                  {dayOptions.map(day => (
+                    <option key={day} value={day}>{day}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-1 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      {/* Display selected date */}
+      {value && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-emerald-50 border border-emerald-200 rounded-lg p-2 flex items-center gap-2"
+        >
+          <Calendar className="w-4 h-4 text-emerald-600" />
+          <span className="text-xs sm:text-sm text-emerald-700 font-medium">
+            Selected: {formatDateForDisplay(value)}
+          </span>
+        </motion.div>
+      )}
+
+      {/* Error Display */}
+      <AnimatePresence>
+        {error && (
+          <motion.p
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            className="text-xs sm:text-sm text-red-600 flex items-center gap-1"
+          >
+            <XCircle className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+            {error}
+          </motion.p>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Tips */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        className="text-xs text-gray-500 bg-blue-50 border border-blue-200 rounded-lg p-2"
+      >
+        <div className="font-medium text-blue-700 mb-1">📱 Tips:</div>
+        <div>• Tap date field for native picker • Use dropdowns if needed</div>
+      </motion.div>
+    </div>
+  );
+};
 
 export const SignIn = () => {
   const [formData, setFormData] = useState({
@@ -150,6 +422,26 @@ export const SignIn = () => {
     [errors]
   );
 
+  // Handle date change from MobileFriendlyDateInput
+  const handleDateChange = useCallback(
+    (date) => {
+      setFormData((prev) => ({
+        ...prev,
+        birth_date: date,
+      }));
+
+      // Clear birth_date error when user selects a date
+      if (errors.birth_date) {
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors.birth_date;
+          return newErrors;
+        });
+      }
+    },
+    [errors]
+  );
+
   // OTP input handler
   const handleOtpChange = useCallback(
     (e) => {
@@ -238,11 +530,8 @@ export const SignIn = () => {
         // Check if response indicates OTP is needed
         if (response.success && response?.email) {
           // Send OTP
-
-          //impoirttant *****************
-          
           await sendOtp({ email: response.email }).unwrap();
-          // ******************************
+          
           // Toggle to OTP form and start timer
           setEmail(response.email);
           setShowOtp(true);
@@ -371,7 +660,6 @@ export const SignIn = () => {
       setOtpData({ otp: "" });
       setErrors({});
       setOtpErrors({});
-      // setShowOtp(false);
       
       // Clear timer
       if (timerRef.current) {
@@ -401,11 +689,6 @@ export const SignIn = () => {
 
       // Navigate with a small delay to ensure Redux state is updated
       setTimeout(() => {
-        // console.log(
-        //   "Navigating to:",
-        //   isAdmin ? "/admin/dashboard" : "/dashboard"
-        // ); // Debug log
-
         if (isAdmin) {
           navigate("/admin/dashboard", { replace: true });
         } else {
@@ -617,6 +900,7 @@ export const SignIn = () => {
               style={{
                 WebkitAppearance: "none",
                 appearance: "none",
+                fontSize: "16px",
               }}
             />
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -810,6 +1094,7 @@ export const SignIn = () => {
               style={{
                 WebkitAppearance: "none",
                 appearance: "none",
+                fontSize: "16px",
               }}
             />
 
@@ -834,277 +1119,243 @@ export const SignIn = () => {
               className="mt-1.5 text-xs sm:text-sm text-red-600 flex items-center gap-1"
             >
               <XCircle className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-             {errors.emp_id}
-           </motion.p>
-         )}
-       </motion.div>
+              {errors.emp_id}
+            </motion.p>
+          )}
+        </motion.div>
 
-       {/* Birth Date Field - Enhanced */}
-       <motion.div variants={itemVariants}>
-         <label
-           htmlFor="birth_date"
-           className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2"
-         >
-           Birth Date <span className="text-red-500">*</span>
-           <span className="text-xs text-gray-500 ml-1">
-             (Must be 16+ years old)
-           </span>
-         </label>
-         <div className="relative">
-           <div className="absolute inset-y-0 left-0 pl-2 sm:pl-3 flex items-center pointer-events-none">
-             <Calendar className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-gray-400" />
-           </div>
-           <motion.input
-             whileFocus={{ scale: 1.01 }}
-             type="date"
-             id="birth_date"
-             name="birth_date"
-             value={formData.birth_date}
-             onChange={handleInputChange}
-             disabled={isLoading}
-             max={new Date().toISOString().split("T")[0]}
-             className={`w-full pl-7 sm:pl-8 md:pl-9 lg:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 md:py-3 text-xs sm:text-sm md:text-base border rounded-lg sm:rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 bg-gray-50/50 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation ${
-               errors.birth_date
-                 ? "border-red-400 focus:ring-red-500"
-                 : "border-gray-200"
-             }`}
-             autoComplete="bday"
-             style={{
-               WebkitAppearance: "none",
-               appearance: "none",
-             }}
-           />
-         </div>
-         {errors.birth_date && (
-           <motion.p
-             initial={{ opacity: 0, y: -5 }}
-             animate={{ opacity: 1, y: 0 }}
-             className="mt-1.5 text-xs sm:text-sm text-red-600 flex items-center gap-1"
-           >
-             <XCircle className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-             {errors.birth_date}
-           </motion.p>
-         )}
-       </motion.div>
+        {/* Birth Date Field - Enhanced with Mobile-Friendly Component */}
+        <motion.div variants={itemVariants}>
+          <MobileFriendlyDateInput
+            value={formData.birth_date}
+            onChange={handleDateChange}
+            error={errors.birth_date}
+            disabled={isLoading}
+            label="Birth Date"
+            required={true}
+            minAge={16}
+          />
+        </motion.div>
 
-       {/* Sign In Button - Enhanced */}
-       <motion.div variants={itemVariants} className="pt-2 sm:pt-3">
-         <motion.button
-           whileHover={!isLoading ? { scale: 1.02, y: -1 } : {}}
-           whileTap={!isLoading ? { scale: 0.98 } : {}}
-           type="submit"
-           disabled={isLoading}
-           className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white py-2.5 sm:py-3 md:py-3.5 px-4 rounded-lg sm:rounded-xl font-medium text-xs sm:text-sm md:text-base shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2 touch-manipulation min-h-[44px]"
-           style={{
-             WebkitTapHighlightColor: "transparent",
-             touchAction: "manipulation",
-           }}
-         >
-           {isLoading ? (
-             <>
-               <motion.div
-                 animate={{ rotate: 360 }}
-                 transition={{
-                   duration: 1,
-                   repeat: Infinity,
-                   ease: "linear",
-                 }}
-                 className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 border-2 border-white border-t-transparent rounded-full"
-               />
-               <span className="text-xs sm:text-sm md:text-base">
-                 {isValidationLoading ? "Validating..." : "Signing In..."}
-               </span>
-             </>
-           ) : (
-             <>
-               <LogIn className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5" />
-               <span className="text-xs sm:text-sm md:text-base">Sign In</span>
-             </>
-           )}
-         </motion.button>
-       </motion.div>
+        {/* Sign In Button - Enhanced */}
+        <motion.div variants={itemVariants} className="pt-2 sm:pt-3">
+          <motion.button
+            whileHover={!isLoading ? { scale: 1.02, y: -1 } : {}}
+            whileTap={!isLoading ? { scale: 0.98 } : {}}
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white py-2.5 sm:py-3 md:py-3.5 px-4 rounded-lg sm:rounded-xl font-medium text-xs sm:text-sm md:text-base shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2 touch-manipulation min-h-[44px]"
+            style={{
+              WebkitTapHighlightColor: "transparent",
+              touchAction: "manipulation",
+            }}
+          >
+            {isLoading ? (
+              <>
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{
+                    duration: 1,
+                    repeat: Infinity,
+                    ease: "linear",
+                  }}
+                  className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 border-2 border-white border-t-transparent rounded-full"
+                />
+                <span className="text-xs sm:text-sm md:text-base">
+                  {isValidationLoading ? "Validating..." : "Signing In..."}
+                </span>
+              </>
+            ) : (
+              <>
+                <LogIn className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5" />
+                <span className="text-xs sm:text-sm md:text-base">Sign In</span>
+              </>
+            )}
+          </motion.button>
+        </motion.div>
 
-       {/* Required Fields Notice */}
-       <motion.div variants={itemVariants} className="pt-1 sm:pt-2">
-         <p className="text-xs sm:text-sm text-gray-500 text-center">
-           <span className="text-red-500">*</span> Required fields
-         </p>
-       </motion.div>
-     </motion.div>
-   ),
-   [
-     formData,
-     errors,
-     showEmpIdHelp,
-     isLoading,
-     isValidationLoading,
-     handleInputChange,
-     itemVariants,
-   ]
- );
+        {/* Required Fields Notice */}
+        <motion.div variants={itemVariants} className="pt-1 sm:pt-2">
+          <p className="text-xs sm:text-sm text-gray-500 text-center">
+            <span className="text-red-500">*</span> Required fields
+          </p>
+        </motion.div>
+      </motion.div>
+    ),
+    [
+      formData,
+      errors,
+      showEmpIdHelp,
+      isLoading,
+      isValidationLoading,
+      handleInputChange,
+      handleDateChange,
+      itemVariants,
+    ]
+  );
 
- return (
-   <div className="min-h-screen w-full bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-100 flex items-center justify-center p-2 sm:p-4 md:p-6 lg:p-8">
-     {/* Enhanced Snackbar Notification - Fully Responsive */}
-     <AnimatePresence>
-       {notification.show && (
-         <motion.div
-           variants={snackbarVariants}
-           initial="hidden"
-           animate="visible"
-           exit="exit"
-           className={`fixed top-4 sm:top-6 left-1/2 transform -translate-x-1/2 z-50 ${getNotificationStyles(
-             notification.type
-           )} text-white rounded-xl sm:rounded-2xl border-2 shadow-2xl max-w-[calc(100vw-1rem)] sm:max-w-md w-full mx-2 sm:mx-4 backdrop-blur-sm`}
-         >
-           <div className="flex items-start gap-2 sm:gap-3 p-3 sm:p-4">
-             {/* Icon */}
-             <div className="flex-shrink-0 mt-0.5">
-               <motion.div
-                 animate={{
-                   scale: [1, 1.1, 1],
-                   rotate:
-                     notification.type === "success" ? [0, 10, -10, 0] : 0,
-                 }}
-                 transition={{
-                   duration: notification.type === "success" ? 0.6 : 0.3,
-                   repeat: notification.type === "success" ? 2 : 0,
-                 }}
-               >
-                 {getNotificationIcon(notification.type)}
-               </motion.div>
-             </div>
+  return (
+    <div className="min-h-screen w-full bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-100 flex items-center justify-center p-2 sm:p-4 md:p-6 lg:p-8">
+      {/* Enhanced Snackbar Notification - Fully Responsive */}
+      <AnimatePresence>
+        {notification.show && (
+          <motion.div
+            variants={snackbarVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className={`fixed top-4 sm:top-6 left-1/2 transform -translate-x-1/2 z-50 ${getNotificationStyles(
+              notification.type
+            )} text-white rounded-xl sm:rounded-2xl border-2 shadow-2xl max-w-[calc(100vw-1rem)] sm:max-w-md w-full mx-2 sm:mx-4 backdrop-blur-sm`}
+          >
+            <div className="flex items-start gap-2 sm:gap-3 p-3 sm:p-4">
+              {/* Icon */}
+              <div className="flex-shrink-0 mt-0.5">
+                <motion.div
+                  animate={{
+                    scale: [1, 1.1, 1],
+                    rotate:
+                      notification.type === "success" ? [0, 10, -10, 0] : 0,
+                  }}
+                  transition={{
+                    duration: notification.type === "success" ? 0.6 : 0.3,
+                    repeat: notification.type === "success" ? 2 : 0,
+                  }}
+                >
+                  {getNotificationIcon(notification.type)}
+                </motion.div>
+              </div>
 
-             {/* Message */}
-             <div className="flex-1 min-w-0">
-               <p className="text-xs sm:text-sm font-medium leading-relaxed break-words">
-                 {notification.message}
-               </p>
-             </div>
+              {/* Message */}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium leading-relaxed break-words">
+                  {notification.message}
+                </p>
+              </div>
 
-             {/* Close Button */}
-             <motion.button
-               whileHover={{ scale: 1.1, rotate: 90 }}
-               whileTap={{ scale: 0.9 }}
-               onClick={closeNotification}
-               className="flex-shrink-0 text-white/80 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/30 rounded-full p-1 touch-manipulation"
-               aria-label="Close notification"
-             >
-               <svg
-                 className="w-3 h-3 sm:w-4 sm:h-4"
-                 fill="none"
-                 stroke="currentColor"
-                 viewBox="0 0 24 24"
-               >
-                 <path
-                   strokeLinecap="round"
-                   strokeLinejoin="round"
-                   strokeWidth={2}
-                   d="M6 18L18 6M6 6l12 12"
-                 />
-               </svg>
-             </motion.button>
-           </div>
+              {/* Close Button */}
+              <motion.button
+                whileHover={{ scale: 1.1, rotate: 90 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={closeNotification}
+                className="flex-shrink-0 text-white/80 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/30 rounded-full p-1 touch-manipulation"
+                aria-label="Close notification"
+              >
+                <svg
+                  className="w-3 h-3 sm:w-4 sm:h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </motion.button>
+            </div>
 
-           {/* Progress bar for success messages */}
-           {notification.type === "success" && (
-             <motion.div
-               initial={{ width: "0%" }}
-               animate={{ width: "100%" }}
-               transition={{ duration: 2.5, ease: "linear" }}
-               className="h-1 bg-white/30 rounded-b-xl sm:rounded-b-2xl"
-             />
-           )}
+            {/* Progress bar for success messages */}
+            {notification.type === "success" && (
+              <motion.div
+                initial={{ width: "0%" }}
+                animate={{ width: "100%" }}
+                transition={{ duration: 2.5, ease: "linear" }}
+                className="h-1 bg-white/30 rounded-b-xl sm:rounded-b-2xl"
+              />
+            )}
 
-           {/* Pulse effect for error messages */}
-           {notification.type === "error" && (
-             <motion.div
-               animate={{ opacity: [0.3, 0.6, 0.3] }}
-               transition={{ duration: 1.5, repeat: Infinity }}
-               className="absolute inset-0 bg-white/10 rounded-xl sm:rounded-2xl pointer-events-none"
-             />
-           )}
-         </motion.div>
-       )}
-     </AnimatePresence>
+            {/* Pulse effect for error messages */}
+            {notification.type === "error" && (
+              <motion.div
+                animate={{ opacity: [0.3, 0.6, 0.3] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="absolute inset-0 bg-white/10 rounded-xl sm:rounded-2xl pointer-events-none"
+              />
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-     <motion.div
-       variants={containerVariants}
-       initial="hidden"
-       animate="visible"
-       className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl 2xl:max-w-2xl"
-     >
-       {/* Header - Fully Responsive */}
-       <motion.div
-         variants={itemVariants}
-         className="text-center mb-4 sm:mb-6 md:mb-8"
-       >
-         <motion.div
-           whileHover={{ rotate: 360, scale: 1.1 }}
-           transition={{ duration: 0.6 }}
-           className="inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-lg sm:rounded-xl mb-2 sm:mb-3 md:mb-4 shadow-lg"
-         >
-           <Building2 className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white" />
-         </motion.div>
-         <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-1 sm:mb-2">
-           Employee Portal
-         </h1>
-         <p className="text-xs sm:text-sm md:text-base text-gray-600 px-4">
-           {showOtp
-             ? "Two-Factor Authentication"
-             : "Sign in to access your account"}
-         </p>
-       </motion.div>
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl 2xl:max-w-2xl"
+      >
+        {/* Header - Fully Responsive */}
+        <motion.div
+          variants={itemVariants}
+          className="text-center mb-4 sm:mb-6 md:mb-8"
+        >
+          <motion.div
+            whileHover={{ rotate: 360, scale: 1.1 }}
+            transition={{ duration: 0.6 }}
+            className="inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-lg sm:rounded-xl mb-2 sm:mb-3 md:mb-4 shadow-lg"
+          >
+            <Building2 className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white" />
+          </motion.div>
+          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-1 sm:mb-2">
+            Employee Portal
+          </h1>
+          <p className="text-xs sm:text-sm md:text-base text-gray-600 px-4">
+            {showOtp
+              ? "Two-Factor Authentication"
+              : "Sign in to access your account"}
+          </p>
+        </motion.div>
 
-       {/* Form Card - Enhanced Responsiveness with AnimatePresence for smooth transitions */}
-       <motion.div
-         variants={itemVariants}
-         className="bg-white/90 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl shadow-xl border border-white/20 p-4 sm:p-5 md:p-6 lg:p-8"
-       >
-         <form
-           onSubmit={showOtp ? handleOtpSubmit : handleSubmit}
-           onKeyPress={handleKeyPress}
-           noValidate
-         >
-           <AnimatePresence mode="wait">
-             {showOtp ? OtpForm : LoginForm}
-           </AnimatePresence>
-         </form>
-       </motion.div>
+        {/* Form Card - Enhanced Responsiveness with AnimatePresence for smooth transitions */}
+        <motion.div
+          variants={itemVariants}
+          className="bg-white/90 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl shadow-xl border border-white/20 p-4 sm:p-5 md:p-6 lg:p-8"
+        >
+          <form
+            onSubmit={showOtp ? handleOtpSubmit : handleSubmit}
+            onKeyPress={handleKeyPress}
+            noValidate
+          >
+            <AnimatePresence mode="wait">
+              {showOtp ? OtpForm : LoginForm}
+            </AnimatePresence>
+          </form>
+        </motion.div>
 
-       {/* Footer - Enhanced Responsiveness */}
-       <motion.div
-         variants={itemVariants}
-         className="text-center mt-3 sm:mt-4 md:mt-6 lg:mt-8 space-y-1 sm:space-y-2"
-       >
-         {!showOtp && (
-           <p className="text-xs sm:text-sm text-gray-500 px-4">
-             Don't have an account?{" "}
-             <Link
-               className="text-emerald-600 hover:text-emerald-700 font-medium transition-colors underline underline-offset-2"
-               to="/registration"
-             >
-               Sign Up
-             </Link>
-           </p>
-         )}
-         <p className="text-xs sm:text-sm text-gray-500 px-4">
-           Need help? Contact your system administrator
-         </p>
+        {/* Footer - Enhanced Responsiveness */}
+        <motion.div
+          variants={itemVariants}
+          className="text-center mt-3 sm:mt-4 md:mt-6 lg:mt-8 space-y-1 sm:space-y-2"
+        >
+          {!showOtp && (
+            <p className="text-xs sm:text-sm text-gray-500 px-4">
+              Don't have an account?{" "}
+              <Link
+                className="text-emerald-600 hover:text-emerald-700 font-medium transition-colors underline underline-offset-2"
+                to="/registration"
+              >
+                Sign Up
+              </Link>
+            </p>
+          )}
+          <p className="text-xs sm:text-sm text-gray-500 px-4">
+            Need help? Contact your system administrator
+          </p>
 
-         {/* Additional responsive footer info */}
-         <motion.div
-           className="pt-2 sm:pt-3 border-t border-gray-200/50 mt-3 sm:mt-4"
-           initial={{ opacity: 0 }}
-           animate={{ opacity: 1 }}
-           transition={{ delay: 1 }}
-         >
-           <p className="text-xs text-gray-400">
-             Secure • Private • Protected
-           </p>
-         </motion.div>
-       </motion.div>
-     </motion.div>
-   </div>
- );
+          {/* Additional responsive footer info */}
+          <motion.div
+            className="pt-2 sm:pt-3 border-t border-gray-200/50 mt-3 sm:mt-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1 }}
+          >
+            <p className="text-xs text-gray-400">
+              Secure • Private • Protected
+            </p>
+          </motion.div>
+        </motion.div>
+      </motion.div>
+    </div>
+  );
 };

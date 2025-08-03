@@ -16,7 +16,6 @@ const baseQuery = fetchBaseQuery({
 
     if (token) {
       headers.set("authorization", `Bearer ${token}`);
-            console.log('  ✅ Authorization header set');
 
     }else{
             console.log('  ❌ NO TOKEN - Request will be unauthorized');
