@@ -58,101 +58,99 @@ export const CreateNewVote = () => {
 
   // Validation functions
   const validateForm = () => {
-    const newErrors = {};
+  const newErrors = {};
 
-    // Vote subject validation
-    if (!formData.voteSubject.trim()) {
-      newErrors.voteSubject = "Vote subject is required";
-    } else if (formData.voteSubject.trim().length < 3) {
-      newErrors.voteSubject = "Vote subject must be at least 3 characters";
-    } else if (formData.voteSubject.trim().length > 200) {
-      newErrors.voteSubject = "Vote subject must be less than 200 characters";
+  // Vote subject validation
+  if (!formData.voteSubject.trim()) {
+    newErrors.voteSubject = "Vote subject is required";
+  } else if (formData.voteSubject.trim().length < 3) {
+    newErrors.voteSubject = "Vote subject must be at least 3 characters";
+  } else if (formData.voteSubject.trim().length > 200) {
+    newErrors.voteSubject = "Vote subject must be less than 200 characters";
+  }
+
+  // Basic date and time field validation
+  if (!formData.startDate) {
+    newErrors.startDate = "Start date is required";
+  }
+
+  if (!formData.endDate) {
+    newErrors.endDate = "End date is required";
+  }
+
+  if (!formData.startTime) {
+    newErrors.startTime = "Start time is required";
+  }
+
+  if (!formData.endTime) {
+    newErrors.endTime = "End time is required";
+  }
+
+  // Combined date and time validation (only if all fields are present)
+  if (formData.startDate && formData.endDate && formData.startTime && formData.endTime) {
+    // Create DateTime objects from local input
+    const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`);
+    const endDateTime = new Date(`${formData.endDate}T${formData.endTime}`);
+    const now = new Date();
+
+    // Validate start date is not in the past
+    if (startDateTime <= now) {
+      newErrors.startTime = "Start date and time must be in the future";
     }
 
-    // Date validation
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Validate end date is after start date
+    if (endDateTime <= startDateTime) {
+      newErrors.endTime = "End date and time must be after start date and time";
+    }
+
+    // Check minimum voting period (at least 1 hour)
+    const diffMs = endDateTime - startDateTime;
+    const diffHours = diffMs / (1000 * 60 * 60);
     
-    if (!formData.startDate) {
-      newErrors.startDate = "Start date is required";
-    } else {
-      const startDate = new Date(formData.startDate);
-      if (startDate < today) {
-        newErrors.startDate = "Start date cannot be in the past";
-      }
+    if (diffHours < 1) {
+      newErrors.endTime = "Voting period must be at least 1 hour";
     }
 
-    if (!formData.endDate) {
-      newErrors.endDate = "End date is required";
-    } else if (formData.startDate) {
-      const startDate = new Date(formData.startDate);
-      const endDate = new Date(formData.endDate);
-      
-      if (endDate < startDate) {
-        newErrors.endDate = "End date must be after or equal to start date";
-      }
+    // Additional validation: Check if dates are valid
+    if (isNaN(startDateTime.getTime())) {
+      newErrors.startDate = "Invalid start date format";
+      newErrors.startTime = "Invalid start time format";
     }
 
-    // Time validation
-    if (!formData.startTime) {
-      newErrors.startTime = "Start time is required";
+    if (isNaN(endDateTime.getTime())) {
+      newErrors.endDate = "Invalid end date format";
+      newErrors.endTime = "Invalid end time format";
+    }
+  }
+
+  // Candidates validation
+  if (formData.candidates.length < 2) {
+    newErrors.candidates = "At least 2 candidates are required";
+  } else {
+    const candidateIds = formData.candidates.map(c => c.id).filter(id => id);
+    const uniqueIds = new Set(candidateIds);
+    
+    if (candidateIds.length !== uniqueIds.size) {
+      newErrors.candidates = "Duplicate candidates are not allowed";
     }
 
-    if (!formData.endTime) {
-      newErrors.endTime = "End time is required";
-    }
-
-    // Combined date and time validation
-    if (formData.startDate && formData.endDate && formData.startTime && formData.endTime) {
-      const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`);
-      const endDateTime = new Date(`${formData.endDate}T${formData.endTime}`);
-      const now = new Date();
-
-      // Check if start date time is in the past
-      if (startDateTime <= now) {
-        newErrors.startTime = "Start date and time must be in the future";
+    formData.candidates.forEach((candidate, index) => {
+      if (!candidate.id) {
+        newErrors[`candidate_${index}_id`] = "Please select a candidate";
       }
-
-      // Check if end date time is after start date time
-      if (endDateTime <= startDateTime) {
-        newErrors.endTime = "End date and time must be after start date and time";
+      if (!candidate.description.trim()) {
+        newErrors[`candidate_${index}_description`] = "Description is required";
+      } else if (candidate.description.trim().length < 5) {
+        newErrors[`candidate_${index}_description`] = "Description must be at least 5 characters";
+      } else if (candidate.description.trim().length > 500) {
+        newErrors[`candidate_${index}_description`] = "Description must be less than 500 characters";
       }
+    });
+  }
 
-      // Check minimum voting period (at least 1 hour)
-      const diffMs = endDateTime - startDateTime;
-      const diffHours = diffMs / (1000 * 60 * 60);
-      
-      if (diffHours < 1) {
-        newErrors.endTime = "Voting period must be at least 1 hour";
-      }
-    }
-
-    // Candidates validation
-    if (formData.candidates.length < 2) {
-      newErrors.candidates = "At least 2 candidates are required";
-    } else {
-      const candidateIds = formData.candidates.map(c => c.id).filter(id => id);
-      const uniqueIds = new Set(candidateIds);
-      
-      if (candidateIds.length !== uniqueIds.size) {
-        newErrors.candidates = "Duplicate candidates are not allowed";
-      }
-
-      formData.candidates.forEach((candidate, index) => {
-        if (!candidate.id) {
-          newErrors[`candidate_${index}_id`] = "Please select a candidate";
-        }
-        if (!candidate.description.trim()) {
-          newErrors[`candidate_${index}_description`] = "Description is required";
-        } else if (candidate.description.trim().length < 5) {
-          newErrors[`candidate_${index}_description`] = "Description must be at least 5 characters";
-        }
-      });
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+};
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -217,7 +215,17 @@ export const CreateNewVote = () => {
     setIsSubmitting(true);
     
     try {
-      await addNewVote(formData).unwrap();
+ const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`);
+    const endDateTime = new Date(`${formData.endDate}T${formData.endTime}`);
+    
+    const payload = {
+      voteSubject: formData.voteSubject,
+      startDateTime: startDateTime.toISOString(),
+      endDateTime: endDateTime.toISOString(),
+      candidates: formData.candidates,
+    };
+    
+    await addNewVote(payload).unwrap();
       setSuccessMessage("Vote created successfully! 🎉");
       
       // Reset form
