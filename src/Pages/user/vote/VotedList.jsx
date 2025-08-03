@@ -59,6 +59,9 @@ export const VotedList = () => {
     }
     window.scrollTo(0, 0);
   }, [data]);
+  useEffect(() => {
+    refetch()
+  }, []);
 
   // Memoized functions for better performance
   const getTimeStatus = useCallback((startDateTime, endDateTime) => {
