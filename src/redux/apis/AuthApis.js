@@ -9,6 +9,7 @@ const baseQuery = fetchBaseQuery({
     // Get token from state or cookies
     const token = getState().auth.token || Cookies.get("authToken");
 
+
     if (token) {
       headers.set("authorization", `Bearer ${token}`);
     }

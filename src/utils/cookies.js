@@ -72,7 +72,14 @@ const cookieOptions = {
  */
 export const setAuthCookies = (token, userData, expiresAt) => {
   const expiresInDays = (expiresAt - Date.now()) / (1000 * 60 * 60 * 24);
-
+console.log('🍪 setAuthCookies called with:', {
+    token: token ? 'EXISTS' : 'MISSING',
+    userData,
+    expiresAt,
+    expiresInDays,
+    isProduction,
+    cookieOptions
+  });
   Cookies.set('authToken', token, {
     ...cookieOptions,
     expires: expiresInDays,
@@ -87,6 +94,13 @@ export const setAuthCookies = (token, userData, expiresAt) => {
     ...cookieOptions,
     expires: expiresInDays,
   });
+
+  console.log('🍪 Cookies after setting:', {
+      authToken: Cookies.get('authToken'),
+      userData: Cookies.get('userData'),
+      expiresAt: Cookies.get('expiresAt'),
+      allCookies: document.cookie
+    });
 };
 
 export const setEditProfileUser = (user) => {
