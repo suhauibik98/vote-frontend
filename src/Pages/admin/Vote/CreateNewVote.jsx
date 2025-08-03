@@ -131,8 +131,9 @@ export const CreateNewVote = () => {
       const endDateTime = new Date(`${formData.endDate}T${formData.endTime}`);
       const jordanNow = getJordanTime();
 
-      // Check if start date time is in the past (Jordan time)
-      if (startDateTime <= jordanNow) {
+      // Check if start date time is in the past (Jordan time) - allow 1 minute tolerance
+      const oneMinuteAgo = new Date(jordanNow.getTime() - 60 * 1000);
+      if (startDateTime <= oneMinuteAgo) {
         newErrors.startTime = "Start date and time must be in the future (Jordan time)";
       }
 
@@ -288,12 +289,13 @@ export const CreateNewVote = () => {
     
     const jordanNow = getJordanTime();
     const selectedDate = new Date(formData.startDate);
-    const jordanToday = new Date(getJordanDateString());
+    const jordanTodayString = getJordanDateString();
     
     // If start date is today in Jordan timezone
-    if (selectedDate.toDateString() === jordanToday.toDateString()) {
-      // Return current Jordan time (no additional buffer)
-      return getJordanTimeString(jordanNow);
+    if (formData.startDate === jordanTodayString) {
+      // Add 1 minute buffer to current Jordan time
+      const minTime = new Date(jordanNow.getTime() + 60 * 1000); // Add 1 minute
+      return getJordanTimeString(minTime);
     }
     
     return ""; // No minimum time for future dates
