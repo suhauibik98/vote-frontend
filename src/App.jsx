@@ -105,10 +105,10 @@ function App() {
           </Route>
 
           {/* Legacy admin dashboard route - redirect to new structure */}
-          <Route 
+          {/* <Route 
             path="/admin/dashboard" 
             element={<Navigate to="/admin/dashboard" replace />} 
-          />
+          /> */}
 
           {/* Catch all - redirect to unauthorized */}
           <Route path="*" element={<Navigate to="/unauthorized" replace />} />

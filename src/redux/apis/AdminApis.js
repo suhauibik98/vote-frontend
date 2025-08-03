@@ -9,10 +9,24 @@ const baseQuery = fetchBaseQuery({
   prepareHeaders: (headers, { getState }) => {
     const tokenFromState = getState().auth?.token;
     const tokenFromCookie = Cookies.get("authToken");
+    const authState = getState().auth;
+    
+console.log('🔍 AdminAPI prepareHeaders Debug:');
+    console.log('  Redux token:', tokenFromState ? 'EXISTS' : 'NULL');
+    console.log('  Cookie token:', tokenFromCookie ? 'EXISTS' : 'NULL');
+    console.log('  Auth state:', authState);
+    console.log('  All cookies:', document.cookie);
+    
     const token = tokenFromState || tokenFromCookie;
+        console.log('  Final token used:', token ? 'EXISTS' : 'NOT_FOUND');
 
     if (token) {
       headers.set("authorization", `Bearer ${token}`);
+            console.log('  ✅ Authorization header set');
+
+    }else{
+            console.log('  ❌ NO TOKEN - Request will be unauthorized');
+
     }
 
     headers.set("content-type", "application/json");
@@ -21,7 +35,10 @@ const baseQuery = fetchBaseQuery({
 });
 
 const baseQueryWithReauth = async (args, api, extraOptions) => {
+    console.log('🚀 AdminAPI request:', args); // ✅ ADD REQUEST LOGGING
+
   let result = await baseQuery(args, api, extraOptions);
+  console.log('📥 AdminAPI response:', result); // ✅ ADD RESPONSE LOGGING
 
   if (result?.error?.status === 401) {
     console.warn("Token expired or unauthorized. Logging out...");

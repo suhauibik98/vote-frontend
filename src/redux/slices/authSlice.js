@@ -142,19 +142,31 @@ const authSlice = createSlice({
     token = action.payload.token;
     user = jwtDecode(token); // Decode user from token
     expiresIn = user.exp ? (user.exp * 1000 - Date.now()) : 86400000;
+        console.log('🔍 Using direct API format');
+
   } else {
     // Structured payload format
     ({ user, token, expiresIn = 86400000 } = action.payload);
+        console.log('🔍 Using structured format');
+
   }
 
   const expiresAt = Date.now() + expiresIn;
-
+console.log('🔍 Before Redux state update:', {
+    hasToken: !!token,
+    hasUser: !!user,
+    currentState: state
+  });
   state.isLoading = false;
   state.isAuthenticated = true;
   state.user = user;
   state.token = token;
   state.error = null;
 
+   console.log('🔍 After Redux state update:', {
+    reduxToken: state.token ? 'SET' : 'NOT_SET',
+    isAuthenticated: state.isAuthenticated
+  });
   setAuthCookies(token, user, expiresAt);
   authSlice.caseReducers.setAutoLogoutTimer(state, { payload: expiresAt });
 },
