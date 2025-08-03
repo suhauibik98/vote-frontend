@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useState } from "react";
 import {
-    useGetVotedListUserQuery,
+  useGetVotedListUserForActiveQuery,
   useGetVoteMainActiveQuery,
   useUserVoteMutation,
 } from "../../../redux/apis/UserApis";
@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 export const ActiveVote = () => {
   const { data, refetch } = useGetVoteMainActiveQuery();
 
-  const {data:votedListData , refetch:refetchVotedListUser} = useGetVotedListUserQuery()
+  const {data:votedListData , refetch:refetchVotedListUser} = useGetVotedListUserForActiveQuery()
   
   const [activeVotes, setActiveVotes] = useState([]);
   
@@ -26,7 +26,7 @@ export const ActiveVote = () => {
     if (data?.voteMain) {
       setActiveVotes(data.voteMain || []);
     }
-    refetchVotedListUser()
+    refreshData()
   }, [data]);
 
   // Update current time every second for real-time countdown

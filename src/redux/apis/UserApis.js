@@ -66,6 +66,10 @@ export const userApi = createApi({
       query: ({currentPage , itemsPerPage}) => `/user/get-voted-list-user?page=${currentPage}&limit=${itemsPerPage}`,
       providesTags: ["Auth"],
     }),
+    getVotedListUserForActive: builder.query({
+      query: () => `/user/get-voted-list-user-for-active`,
+      providesTags: ["Auth"],
+    }),
     getComminVote: builder.query({
       query: () => "/user/get-comming-vote",
       providesTags: ["Auth"],
@@ -77,4 +81,4 @@ export const userApi = createApi({
   }),
 });
 
-export const { useEditProfileMutation ,useGetDataForDashBoardQuery,useGetComminVoteQuery,useGetVotedListUserQuery, useGetVoteMainActiveQuery, useUserVoteMutation } = userApi;
+export const { useEditProfileMutation ,useGetVotedListUserForActiveQuery,useGetDataForDashBoardQuery,useGetComminVoteQuery,useGetVotedListUserQuery, useGetVoteMainActiveQuery, useUserVoteMutation } = userApi;
